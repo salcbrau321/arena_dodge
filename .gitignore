@@ -1,0 +1,5 @@
+*.o
+*.lst
+arena_dodge
+*~
+*.swp
