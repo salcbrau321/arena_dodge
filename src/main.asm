@@ -28,18 +28,23 @@ extern update_player
 
 ; game_state.asm
 extern init_game_state
-extern player_x
-extern player_y
 
 ; client_render_cli.asm
-extern init_game_board 
 extern clear_player
 extern draw_player
 extern clear_screen
 extern show_cursor
 extern hide_cursor
 
+; render_board.asm
+extern render_board
+
+; layout_state.asm
+extern calculate_layout
+extern get_window_size
+
 %include "constants.inc"
+%include "utils.asm"
 
 section .data
     welcomeMsg db "Welcome to Arena Dodge!", 10
@@ -59,25 +64,19 @@ _start:
     call clear_screen
     call hide_cursor
 
-    mov rax, SYS_WRITE ; welcome message
-    mov rdi, STDOUT
-    mov rsi, welcomeMsg
-    mov rdx, welcomeMsgLen
-    syscall
-
-    mov rax, SYS_WRITE ; write continue message
-    mov rdi, STDOUT
-    mov rsi, startMsg 
-    mov rdx, startMsgLen 
-    syscall
+    WRITE welcomeMsg, welcomeMsgLen
+    WRITE startMsg, startMsgLen
  
     call enable_raw_mode
     call read_key
 
-    call init_game_board
+    call clear_screen
+    call get_window_size
+    call calculate_layout
+    call render_board 
     call init_game_state
     
-    call draw_player
+    ;call draw_player
 
 clone:
     mov rax, SYS_CLONE ; starts a thread
@@ -116,9 +115,7 @@ kb_loop_exit:
     call show_cursor
     call clear_screen
 
-    mov rax, SYS_EXIT_GROUP
-    mov rdi, 0
-    syscall
+    SYSCALL SYS_EXIT_GROUP, 0
 
 main_loop:
     jmp main_loop 

@@ -13,6 +13,7 @@
 global update_player
 
 %include "constants.inc"
+%include "game_layout.inc"
 
 extern player_x
 extern player_y
@@ -37,7 +38,7 @@ update_player:
 
 .do_left:
     mov rax, [rel player_x]
-    cmp rax, 0
+    cmp rax, 1
     jle .ret
     dec rax
     mov [rel player_x], rax
@@ -45,7 +46,7 @@ update_player:
 
 .do_right:
     mov rax, [rel player_x]
-    cmp rax, MAX_COLS - 1
+    cmp rax, BOARD_WIDTH 
     jge .ret
     inc rax
     mov [rel player_x], rax
@@ -53,17 +54,17 @@ update_player:
 
 .do_up:
     mov rax, [rel player_y]
-    cmp rax, MAX_ROWS - 1
-    jge .ret
-    inc rax
-    mov [rel player_x], rax
+    cmp rax, 1 
+    jle .ret
+    dec rax
+    mov [rel player_y], rax
     ret
 
 .do_down:
     mov rax, [rel player_y]
-    cmp rax, 0
-    jle .ret
-    dec rax
+    cmp rax, BOARD_HEIGHT 
+    jge .ret
+    inc rax
     mov [rel player_y], rax
     ret
 

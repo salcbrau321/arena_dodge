@@ -21,8 +21,9 @@
 %macro WRITE 2
     mov rax, SYS_WRITE
     mov rdi, STDOUT
-    mov rsi, %1
+    lea rsi, %1
     mov rdx, %2
+    syscall
 %endmacro
 
 ;--------------------------------------------------------
@@ -31,10 +32,11 @@
 ;   clobbers: rax, rdi, rsi, rdx 
 ;--------------------------------------------------------
 %macro IOCTL 3
-    mov rax, SYS_IOCTL 
-    mov rdi, %1 
+    mov rax, SYS_IOCTL
+    mov rdi, %1
     mov rsi, %2
-    mov rdx, %3
+    lea rdx, [rel %3]
+    syscall
 %endmacro
 
 ;--------------------------------------------------------------------------------------
@@ -46,11 +48,18 @@
 ;       SYSCALL SYS_IOCTL, STDIN, TIOCGWINZ, winsize_buf
 ;   clobbers: rax, rdi, rsi, rdx 
 ;--------------------------------------------------------------------------------------
-%macro IOCTL 3
-    mov rax, SYS_IOCTL 
-    mov rdi, %1 
-    mov rsi, %2
-    mov rdx, %3
+%macro SYSCALL 1-4
+    mov rax, %1 
+%if %0 >= 2
+    mov rdi, %2
+%endif
+%if %0 >= 3
+    mov rsi, %3
+%endif
+%if %0 >= 4
+    mov rdx, %4
+%endif
+    syscall
 %endmacro
 
 %endif

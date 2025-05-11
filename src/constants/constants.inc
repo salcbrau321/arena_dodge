@@ -14,9 +14,6 @@
 %define F_SETFL 4
 %define O_NONBLOCK 0x800
 
-; IOCTL call options 
-%define TCGETS 0x5401
-%define TCSETS 0x5402
 
 ; Flags for clone call
 %define CLONE_VM      0x00000100
@@ -25,7 +22,12 @@
 %define CLONE_SIGHAND 0x00000800
 %define CLONE_THREAD  0x00010000
 
-; Flags for IOCTL
+; IOCTL call options 
+%define TCGETS 0x5401
+%define TCSETS 0x5402
+%define TIOCGWINSZ 0x5413
+
+; Flags for IOTCL
 %define ICANON 0x0002
 %define ECHO 0x0008
 %define ISIG 0x0001
@@ -57,3 +59,17 @@
 %define KEY_S 's'
 %define KEY_D 'd'
 
+; Entity struct
+ENTITY_X: equ 0
+ENTITY_Y: equ 1
+ENTITY_LAST_X: equ 2
+ENTITY_LAST_Y: equ 3
+ENTITY_TYPE: equ 4
+ENTITY_GLYPH: equ 5
+ENTITY_ALIVE: equ 6
+ENTITY_LIVES: equ 7
+ENTITY_FLAGS: equ 8
+ENTITY_SIZE: equ 16
+
+; Settings
+MAX_ENTITIES: equ 64
