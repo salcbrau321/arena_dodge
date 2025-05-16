@@ -36,8 +36,12 @@ extern clear_screen
 extern show_cursor
 extern hide_cursor
 
-; render_board.asm
+; ui/render_board.asm
 extern render_board
+
+; ui/resize_window_handler.asm
+extern setup_win_resize 
+extern window_resized
 
 ; layout_state.asm
 extern calculate_layout
@@ -75,7 +79,7 @@ _start:
     call calculate_layout
     call render_board 
     call init_game_state
-    
+    call setup_win_resize 
     ;call draw_player
 
 clone:
@@ -89,7 +93,7 @@ clone:
 
     test rax, rax ; if rax is 0, go to je (start thread), other wise run main loop
     je kb_thread 
-    jne main_loop
+    jne render_loop  
 
 kb_thread:
 
@@ -117,6 +121,18 @@ kb_loop_exit:
 
     SYSCALL SYS_EXIT_GROUP, 0
 
-main_loop:
-    jmp main_loop 
+render_loop:
+    cmp byte [rel window_resized], 1
+    je handle_resize
+    jne no_resize
+
+handle_resize:
+    call clear_screen
+    call get_window_size
+    call calculate_layout
+    call render_board 
+    mov byte [rel window_resized], 0
+
+no_resize:
+    jmp render_loop 
 
