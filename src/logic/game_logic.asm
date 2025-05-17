@@ -10,14 +10,14 @@
 ;   ld -o arena_dodge build/*.o
 ;=============================================================================
 
-global update_player
+; src/logic/entity.asm
+extern get_entity
 
 %include "constants.inc"
 %include "game_layout.inc"
 
-extern player_x
-extern player_y
-extern last_key
+section .text
+    global update_player
 
 ;--------------------------------------------------------
 ; update_player 
@@ -26,6 +26,9 @@ extern last_key
 ;   clobbers:  rax, rdi, rsi, rdx
 ;--------------------------------------------------------
 update_player:
+    mov rax, 0
+    call get_entity
+
     cmp al, KEY_LEFT
     je .do_left
     cmp al, KEY_RIGHT
@@ -37,35 +40,35 @@ update_player:
     ret
 
 .do_left:
-    mov rax, [rel player_x]
+    mov rax, [rdi + ENTITY_X]
     cmp rax, 1
     jle .ret
     dec rax
-    mov [rel player_x], rax
+    mov [rdi + ENTITY_X], rax
     ret
 
 .do_right:
-    mov rax, [rel player_x]
+    mov rax, [rdi + ENTITY_X]
     cmp rax, BOARD_WIDTH 
     jge .ret
     inc rax
-    mov [rel player_x], rax
+    mov [rdi + ENTITY_X], rax
     ret
 
 .do_up:
-    mov rax, [rel player_y]
+    mov rax, [rdi + ENTITY_Y]
     cmp rax, 1 
     jle .ret
     dec rax
-    mov [rel player_y], rax
+    mov [rdi + ENTITY_Y], rax
     ret
 
 .do_down:
-    mov rax, [rel player_y]
+    mov rax, [rdi + ENTITY_Y]
     cmp rax, BOARD_HEIGHT 
     jge .ret
     inc rax
-    mov [rel player_y], rax
+    mov [rdi + ENTITY_Y], rax
     ret
 
 .ret:

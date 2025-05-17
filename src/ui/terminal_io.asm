@@ -146,7 +146,7 @@ show_cursor:
 ;--------------------------------------------------------
 ; set_cursor
 ;   description: updates cursor to new location based on row and column number 
-;   inputs: rdi = row number, rsi = column number
+;   inputs: rdi = y position, rsi = x position 
 ;   clobbers: rdi, rsi, rax, rcx, rdx 
 ;--------------------------------------------------------
 set_cursor:

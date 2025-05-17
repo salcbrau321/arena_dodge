@@ -30,8 +30,6 @@ extern update_player
 extern init_game_state
 
 ; client_render_cli.asm
-extern clear_player
-extern draw_player
 extern clear_screen
 extern show_cursor
 extern hide_cursor
@@ -107,10 +105,10 @@ kb_loop_start:
     je kb_loop_exit 
     
     push rax
-    call clear_player
+ ;   call clear_player
     pop rax
-    call update_player
-    call draw_player
+;    call update_player
+;    call draw_player
 
     jmp kb_loop_start 
 

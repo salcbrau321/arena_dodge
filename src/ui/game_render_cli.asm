@@ -8,15 +8,10 @@
 ;   Contains the rendering functionality 
 ;=============================================================================
 
-global draw_player
-global clear_player
-
 ; state/layout_state.asm
 extern board_x_offset
 extern board_y_offset
 
-extern player_y
-extern player_x
 extern set_cursor
 
 %include "constants.inc"
@@ -68,36 +63,4 @@ section .bss
     top_padding resq 1
     
 section .text
-
-;--------------------------------------------------------
-; clear_player 
-;   description: clears the player at its current location 
-;   clobbers: rdi, rsi, rax, rdx
-;--------------------------------------------------------
-clear_player:
-    mov rdi, [player_y]
-    inc rdi
-    mov rsi, [player_x] 
-    inc rsi
-
-    call set_cursor
-  
-    WRITE blank, blank_len
-    ret
-
-;--------------------------------------------------------
-; clear_player 
-;   description: clears the player at its current location 
-;   clobbers: rdi, rsi, rax, rdx
-;--------------------------------------------------------
-draw_player:
-    mov rdi, [player_y]
-    add rdi, board_y_offset
-
-    mov rsi, [player_x] 
-    add rsi, board_x_offset
-
-    call set_cursor
-    WRITE player_char, player_len
-    ret
 
