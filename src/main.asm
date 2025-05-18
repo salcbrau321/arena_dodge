@@ -14,7 +14,7 @@
 ;=============================================================================
 
 ;=============================================================================
-; EXTERNAL METHODS 
+; EXTERNAL METHODS
 ;=============================================================================
 
 ; terminal_io.asm
@@ -23,8 +23,8 @@ extern restore_mode
 extern read_key
 extern enable_nonblocking_input
 
-; game_logic.asm
-extern update_player
+; src/logic/entity.asm
+extern update_player_location
 
 ; game_state.asm
 extern init_game_state
@@ -34,16 +34,27 @@ extern clear_screen
 extern show_cursor
 extern hide_cursor
 
-; ui/render_board.asm
+; src/ui/render_entitites.asm
+extern render_entities
+extern re_render_entities
+
+; src/ui/render_board.asm
 extern render_board
 
-; ui/resize_window_handler.asm
+; src/ui/resize_window_handler.asm
 extern setup_win_resize 
 extern window_resized
 
 ; layout_state.asm
 extern calculate_layout
 extern get_window_size
+
+;=============================================================================
+; EXTERNAL DATA 
+;=============================================================================
+
+; src/state/game_state.asm
+extern entity_count
 
 %include "constants.inc"
 %include "utils.asm"
@@ -104,11 +115,7 @@ kb_loop_start:
     cmp al, 0x65
     je kb_loop_exit 
     
-    push rax
- ;   call clear_player
-    pop rax
-;    call update_player
-;    call draw_player
+    call update_player_location
 
     jmp kb_loop_start 
 
@@ -129,8 +136,9 @@ handle_resize:
     call get_window_size
     call calculate_layout
     call render_board 
+    call re_render_entities
     mov byte [rel window_resized], 0
 
 no_resize:
+    call render_entities
     jmp render_loop 
-

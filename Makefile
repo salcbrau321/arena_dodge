@@ -1,51 +1,90 @@
 # -------------------------------------------------------------------
 # Tools and Flags
 # -------------------------------------------------------------------
-ASM      := nasm
-ASMFLAGS := -f elf64 -I src/ -I src/constants/ -I src/utils
-LD       := ld
-LDFLAGS  :=
+ASM             := nasm
+ASMFLAGS_BASE   := -f elf64 -I src/ -I src/constants/ -I src/utils
+LD              := ld
+
+ASMFLAGS_DEBUG    := $(ASMFLAGS_BASE) -g -F dwarf
+LDFLAGS_DEBUG     := -g
+
+ASMFLAGS_RELEASE  := $(ASMFLAGS_BASE)
+LDFLAGS_RELEASE   := -s
 
 # -------------------------------------------------------------------
 # Directory Structure
 # -------------------------------------------------------------------
-SRCDIR   := src
-BUILDDIR := build
-BINDIR   := bin
+SRCDIR        := src
+SRC           := $(shell find $(SRCDIR) -type f -name '*.asm')
 
-# Recursively find all .asm files in src
-SRC      := $(shell find $(SRCDIR) -name '*.asm')
+BUILDDIR_DBG  := build/debug
+BUILDDIR_REL  := build/release
 
-# Convert source paths to build object paths
-OBJ      := $(patsubst $(SRCDIR)/%.asm, $(BUILDDIR)/%.o, $(SRC))
+BINDIR_DBG    := bin/debug
+BINDIR_REL    := bin/release
 
-# Final output binary
-TARGET   := $(BINDIR)/arena_dodge_cli
+OBJ_DBG       := $(patsubst $(SRCDIR)/%.asm,$(BUILDDIR_DBG)/%.o,$(SRC))
+OBJ_REL       := $(patsubst $(SRCDIR)/%.asm,$(BUILDDIR_REL)/%.o,$(SRC))
+
+TARGET_DBG    := $(BINDIR_DBG)/arena_dodge_cli
+TARGET_REL    := $(BINDIR_REL)/arena_dodge_cli
 
 # -------------------------------------------------------------------
-# Build Targets
+# High‐level Targets
 # -------------------------------------------------------------------
-all: $(TARGET)
+.PHONY: all debug release clean
 
-# Link object files into final binary
-$(TARGET): $(OBJ) | $(BINDIR)
+all: debug
+
+debug: $(TARGET_DBG)
+
+release: $(TARGET_REL)
+
+# -------------------------------------------------------------------
+# Link Targets
+# -------------------------------------------------------------------
+$(TARGET_DBG): ASMFLAGS := $(ASMFLAGS_DEBUG)
+$(TARGET_DBG): LDFLAGS  := $(LDFLAGS_DEBUG)
+$(TARGET_DBG): $(OBJ_DBG) | $(BINDIR_DBG)
 	$(LD) $(LDFLAGS) -o $@ $^
 
-# Assemble: .asm -> .o, create output dir as needed
-$(BUILDDIR)/%.o: $(SRCDIR)/%.asm
+$(TARGET_REL): ASMFLAGS := $(ASMFLAGS_RELEASE)
+$(TARGET_REL): LDFLAGS  := $(LDFLAGS_RELEASE)
+$(TARGET_REL): $(OBJ_REL) | $(BINDIR_REL)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+# -------------------------------------------------------------------
+# Assemble Rules
+# -------------------------------------------------------------------
+# Debug objects
+$(BUILDDIR_DBG)/%.o: $(SRCDIR)/%.asm | $(BUILDDIR_DBG)
 	@mkdir -p $(dir $@)
 	$(ASM) $(ASMFLAGS) -o $@ $<
 
-# Create build/ and bin/ dirs if missing
-$(BUILDDIR):
-	mkdir -p $(BUILDDIR)
+# Release objects
+$(BUILDDIR_REL)/%.o: $(SRCDIR)/%.asm | $(BUILDDIR_REL)
+	@mkdir -p $(dir $@)
+	$(ASM) $(ASMFLAGS) -o $@ $<
 
-$(BINDIR):
-	mkdir -p $(BINDIR)
+# -------------------------------------------------------------------
+# Directory Creation
+# -------------------------------------------------------------------
+$(BUILDDIR_DBG):
+	mkdir -p $(BUILDDIR_DBG)
 
-# Clean target
+$(BUILDDIR_REL):
+	mkdir -p $(BUILDDIR_REL)
+
+$(BINDIR_DBG):
+	mkdir -p $(BINDIR_DBG)
+
+$(BINDIR_REL):
+	mkdir -p $(BINDIR_REL)
+
+# -------------------------------------------------------------------
+# Clean
+# -------------------------------------------------------------------
 clean:
-	rm -rf $(BUILDDIR) $(BINDIR)
+	rm -rf build/debug build/release bin/debug bin/release
 
-.PHONY: all clean
 

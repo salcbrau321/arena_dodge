@@ -1,8 +1,8 @@
 ; game_layout.inc
 
 ;Desizred sizes
-BOARD_WIDTH: equ 50
-BOARD_HEIGHT: equ 35
+BOARD_WIDTH: equ 80
+BOARD_HEIGHT: equ 20
 UI_HEIGHT: equ 5
 GAME_AREA_PADDING_Y: equ 1
 GAME_AREA_PADDING_X: equ 2
