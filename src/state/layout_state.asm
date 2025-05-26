@@ -26,6 +26,8 @@ game_y_offset resw 1
 board_x_offset resw 1
 board_y_offset resw 1
 
+braille_buff: resb BRAILLE_BOARD_WIDTH * BRAILLE_BOARD_HEIGHT
+
 section .text
     global calculate_layout
     global get_window_size

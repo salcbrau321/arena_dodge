@@ -20,11 +20,13 @@
 ; terminal_io.asm
 extern enable_raw_mode
 extern restore_mode
-extern read_key
 extern enable_nonblocking_input
+extern poll_input
+extern read_key
+extern flush_keyboard_buffer
 
 ; src/logic/entity.asm
-extern update_player_location
+extern update_entities
 
 ; game_state.asm
 extern init_game_state
@@ -81,7 +83,7 @@ _start:
     WRITE startMsg, startMsgLen
  
     call enable_raw_mode
-    call read_key
+;    call read_key
 
     call clear_screen
     call get_window_size
@@ -89,7 +91,6 @@ _start:
     call render_board 
     call init_game_state
     call setup_win_resize 
-    ;call draw_player
 
 clone:
     mov rax, SYS_CLONE ; starts a thread
@@ -105,17 +106,9 @@ clone:
     jne render_loop  
 
 kb_thread:
-
+    call flush_keyboard_buffer
 kb_loop_start:
-    call read_key 
-    
-    cmp al, 0x45
-    je kb_loop_exit 
-
-    cmp al, 0x65
-    je kb_loop_exit 
-    
-    call update_player_location
+    call poll_input
 
     jmp kb_loop_start 
 
@@ -140,5 +133,6 @@ handle_resize:
     mov byte [rel window_resized], 0
 
 no_resize:
+    call update_entities
     call render_entities
     jmp render_loop 

@@ -15,6 +15,7 @@
 %include "constants.inc"
 %include "game_layout.inc"
 %include "utils.asm"
+%include "directions.inc"
 
 ; state/game_state
 extern entities
@@ -24,13 +25,27 @@ section .data
     debugMsg db "Is In Right", 10
     debugLen equ $ - debugMsg 
 
+    dir_to_move_func:
+        dq mv_up
+        dq mv_down
+        dq mv_left
+        dq mv_right
+
+    dir_to_shoot_func:
+        dq sht_up
+        dq sht_down
+        dq sht_left
+        dq sht_right
+
 section .text
     global create_entity
     global delete_entity
     global get_entity
     global create_player
     global create_mob
-    global update_player_location
+    global move_player 
+    global shoot_projectile
+    global update_entities
 
 ;--------------------------------------------------------
 ; create_entity 
@@ -66,6 +81,8 @@ create_entity:
     ; store type (low 8 bits of edi)
     mov byte [rax + ENTITY_TYPE], dil
 
+    mov byte [rax + ENTITY_SPRITE_ID], dil
+
     ; pick glyph & lives by type
     cmp dil, ENTITY_TYPE_PLAYER
     je .L_player
@@ -76,23 +93,19 @@ create_entity:
     jmp .L_done_type
 
 .L_player:
-    mov byte [rax + ENTITY_GLYPH], 0x40 
     mov byte [rax + ENTITY_LIVES], PLAYER_LIVES
     jmp .L_inc
 
 .L_mob:
-    mov byte [rax + ENTITY_GLYPH], 0x26 
     mov byte [rax + ENTITY_LIVES], MOB_LIVES
     jmp .L_inc
 
 .L_proj:
-    mov byte [rax + ENTITY_GLYPH], 0x2A 
     mov byte [rax + ENTITY_LIVES], PROJECTILE_LIVES
     jmp .L_inc
-
 .L_done_type:
     ; unknown type → zero them
-    mov byte [rax + ENTITY_GLYPH], 0
+    mov byte [rax + ENTITY_SPRITE_ID], 0
     mov byte [rax + ENTITY_LIVES], 0
 
 .L_inc:
@@ -221,66 +234,203 @@ create_mob:
     ret
 
 ;--------------------------------------------------------
-; update_player_location 
-;   inputs: al = key code (ASCII or KEY_*)
+; create_mob 
+;   description: creates a mob at specified index 
+;   inputs: esi - initial X, edx - initial Y, rcx - vx, r8 - vy
+;   outpus: rax = operation status (0 = success, 1 = failure) 
+;   clobbers: rcx, rdx, rsi, rdi 
+;--------------------------------------------------------
+create_projectile:
+    push rcx
+    push r8
+    
+    mov edi, ENTITY_TYPE_PROJECTILE
+    call create_entity
+
+    cmp rax, -1
+    je .handle_error
+
+    pop r8
+    pop rcx
+
+    imul rax, rax, ENTITY_SIZE
+    lea rdi, [rel entities + rax]
+
+    mov byte [rdi + ENTITY_VEL_X], cl
+    mov byte [rdi + ENTITY_VEL_Y], r8b
+
+    mov rax, 0
+
+.handle_error:
+    mov rax, 1
+    ret
+
+;--------------------------------------------------------
+; move_player 
+;   inputs: cl = DIR_* (0-3) 
 ;   outputs: updates [player_x], [player_y] 
 ;   clobbers:  rax, rdi, rsi, rdx
 ;--------------------------------------------------------
-update_player_location:
-    push rax
+move_player:
+    xor al, al
+    
     mov rax, 0
+    push rcx
     call get_entity
-    pop rax
-
-    cmp al, KEY_LEFT
-    je .do_left
-    cmp al, KEY_RIGHT
-    je .do_right
-    cmp al, KEY_UP
-    je .do_up
-    cmp al, KEY_DOWN
-    je .do_down
+    pop rcx 
+    
+    movzx rax, cl
+    
+    lea rbx, [rel dir_to_move_func]
+    mov rax, [rbx + rax * 8]
+   
+    call rax
     ret
 
-.do_left:
+mv_left:
     movzx rax, byte [rdi + ENTITY_X]
     cmp rax, 1
-    jle .ret
+    jle mv_exit 
     dec rax
     mov byte [rdi + ENTITY_X], al 
     ret
 
-.do_right:
-   ; push rax
-   ; WRITE debugMsg, debugLen
-   ; pop rax
+mv_right:
     movzx rax, byte [rdi + ENTITY_X]
     mov rcx, BOARD_WIDTH
     sub rcx, 2
     cmp rax, rcx 
-    jge .ret
+    jge mv_exit 
     inc rax
     mov byte [rdi + ENTITY_X], al 
     ret
 
-.do_up:
+mv_up:
     movzx rax, byte [rdi + ENTITY_Y]
     cmp rax, 1 
-    jle .ret
+    jle mv_exit 
     dec rax
     mov byte [rdi + ENTITY_Y], al 
     ret
-
-.do_down:
+  
+mv_down:
     movzx rax, byte [rdi + ENTITY_Y]
     mov rcx, BOARD_HEIGHT
     sub rcx, 2
     cmp rax, rcx 
-    jge .ret
+    jge mv_exit 
     inc rax
     mov byte [rdi + ENTITY_Y], al 
     ret
 
-.ret:
+mv_exit:
     ret
+
+;--------------------------------------------------------
+; shoot_projectile 
+;   inputs: cl = DIR_* (0-3) 
+;   outputs: updates [player_x], [player_y] 
+;   clobbers:  rax, rdi, rsi, rdx
+;--------------------------------------------------------
+shoot_projectile:
+    push rcx
+    xor al, al
+    mov rax, 0
+    call get_entity
+
+    movzx rsi, byte [rdi + ENTITY_X]
+    movzx rdx, byte [rdi + ENTITY_Y]
+   
+    pop rcx
+    movzx rax, cl
     
+    lea rbx, [rel dir_to_shoot_func]
+    mov rax, [rbx + rax * 8]
+    
+    call rax
+    ret
+
+sht_left:
+    dec rsi
+    mov rcx, -1
+    mov r8, 0
+    call create_projectile
+    ret
+
+sht_right:
+    inc rsi
+    mov rcx, 1
+    mov r8, 0
+    call create_projectile
+    ret
+
+sht_up:
+    dec rdx 
+    mov rcx, 0
+    mov r8, -1
+    call create_projectile
+    ret
+
+sht_down:
+    inc rdx 
+    mov rcx, 0
+    mov r8, -1
+    call create_projectile
+    ret
+
+;--------------------------------------------------------
+; update_entities 
+;   inputs: cl = DIR_* (0-3) 
+;   outputs: updates [player_x], [player_y] 
+;   clobbers:  rax, rdi, rsi, rdx
+;--------------------------------------------------------
+update_entities:
+    mov     rcx, 0
+    mov     rdx, [entity_count]
+
+.loop:
+    cmp     rcx, rdx
+    jge     .done
+
+    ; ptr = &entities[rcx]
+    mov     rax, rcx
+    imul    rax, rax, ENTITY_SIZE
+    lea     rdi, [rel entities + rax]
+
+    ; skip if not projectile
+    cmp     byte [rdi + ENTITY_TYPE], ENTITY_TYPE_PROJECTILE
+    jne     .next
+
+    ; skip if out of lives
+    movzx   r9, byte [rdi + ENTITY_LIVES]
+    test    r9, r9
+    jz      .next
+
+    ;–– update X ––
+    movsx   rax, byte [rdi + ENTITY_X]
+    movsx   rbx, byte [rdi + ENTITY_VEL_X]
+    add     rax, rbx
+    cmp     al,  BOARD_WIDTH
+    jae     .out_of_bounds
+    mov     byte [rdi + ENTITY_X], al
+
+    ;–– update Y ––
+    movsx   rax, byte [rdi + ENTITY_Y]
+    movsx   rbx, byte [rdi + ENTITY_VEL_Y]
+    add     rax, rbx
+    cmp     al,  BOARD_HEIGHT
+    jae     .out_of_bounds
+    mov     byte [rdi + ENTITY_Y], al
+
+    jmp     .next
+
+.out_of_bounds:
+    ; decrement lives only
+    dec     byte [rdi + ENTITY_LIVES]
+
+.next:
+    inc     rcx
+    jmp     .loop
+
+.done:
+    ret

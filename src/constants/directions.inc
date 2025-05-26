@@ -1,0 +1,4 @@
+DIR_UP equ 0
+DIR_DOWN equ 1
+DIR_LEFT equ 2
+DIR_RIGHT equ 3

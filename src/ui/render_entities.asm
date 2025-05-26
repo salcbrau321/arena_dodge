@@ -28,6 +28,12 @@ extern entity_count
 extern board_x_offset
 extern board_y_offset
 
+; src/constants/sprites.asm
+extern sprite_table
+
+; src/utils/braille.asm
+extern draw_sprite
+
 ;=============================================================================
 ; EXTERNAL METHODS 
 ;=============================================================================
@@ -47,7 +53,7 @@ section .text
 ;--------------------------------------------------------
 ; render_entities 
 ;   description: renders all the r8 in the game 
-;   clobbers: r12, r8, rdx, rax 
+;   clobbers: r12, r8, rdx, rax  
 ;--------------------------------------------------------
 render_entities:
     movzx r12, byte [entity_count] ; get the entity count (counter for our loop)
@@ -82,17 +88,17 @@ render_entities:
     call set_cursor
     WRITE space_char, 1
 
-    movzx esi, byte [r8 + ENTITY_X] ; writes glyph to current entity location
-    movzx ecx, word [rel board_x_offset]
-    add esi, ecx ; add board offset to draw in proper position
-    
-    movzx edi, byte [r8 + ENTITY_Y]
-    movzx ecx, word [rel board_y_offset]
-    add edi, ecx
-    
-    call set_cursor
-    WRITE r8 + ENTITY_GLYPH, 1
-    
+    movzx edi, byte [r8 + ENTITY_X] ; writes glyph to current entity location
+    movzx esi, byte [r8 + ENTITY_Y]
+   
+    mov al, [r8 + ENTITY_SPRITE_ID]
+    movzx rax, al
+
+    lea rdx, [rel sprite_table]
+    mov rdx, [rdx + rax * 8]
+
+    call draw_sprite
+
     movzx esi, byte [r8 + ENTITY_X] ; sets last X and Y to current X and Y to avoid further rendering
     mov byte [r8 + ENTITY_LAST_X], sil
     movzx esi, byte [r8 + ENTITY_Y]
@@ -122,7 +128,7 @@ re_render_entities:
     add edi, ecx
     
     call set_cursor
-    WRITE r8 + ENTITY_GLYPH, 1
+    WRITE r8 + ENTITY_SPRITE_ID, 1
     
     add r8, ENTITY_SIZE ; increment the buffer reference by size of an entity
     dec r12 ; decrement our entity counter

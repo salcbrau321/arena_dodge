@@ -21,12 +21,12 @@ section .text
 
 init_game_state:
 
-    mov qword rax, BOARD_WIDTH 
+    mov qword rax, BRAILLE_BOARD_WIDTH 
     inc rax
     shr rax, 1
     mov rsi, rax
 
-    mov qword rax, BOARD_HEIGHT 
+    mov qword rax, BRAILLE_BOARD_HEIGHT 
     inc rax
     shr rax, 1
     mov rdx, rax

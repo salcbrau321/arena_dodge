@@ -26,6 +26,8 @@
 %define TCGETS 0x5401
 %define TCSETS 0x5402
 %define TIOCGWINSZ 0x5413
+%define TCFLSH 0x540B
+%define TCIFLUSH 0 
 
 ; Flags for IOTCL
 %define ICANON 0x0002
@@ -47,12 +49,6 @@
 %define ESC 27 ; ASCII Escape
 %define CSI '[' ; Control Sequence Introducer
 
-; After ESC CSI one of these
-%define KEY_UP 'A'
-%define KEY_DOWN 'B'
-%define KEY_RIGHT 'C'
-%define KEY_LEFT 'D'
-
 ; Optional WASD controls
 %define KEY_W 'w'
 %define KEY_A 'a'
@@ -65,17 +61,19 @@ ENTITY_Y: equ 1
 ENTITY_LAST_X: equ 2
 ENTITY_LAST_Y: equ 3
 ENTITY_TYPE: equ 4
-ENTITY_GLYPH: equ 5
+ENTITY_SPRITE_ID: equ 5
 ENTITY_LIVES: equ 6
 ENTITY_SPEED: equ 7
-ENTITY_FLAGS: equ 8
+ENTITY_VEL_X: equ 8
+ENTITY_VEL_Y: equ 9
+ENTITY_FLAGS: equ 10
 
 ENTITY_SIZE: equ 16
 
 ; ENTITY_TYPES
 ENTITY_TYPE_PLAYER equ 0
 ENTITY_TYPE_MOB equ 1
-ENTITY_TYPE_PROJECTILE equ 1
+ENTITY_TYPE_PROJECTILE equ 2
 
 ; Settings
 MAX_ENTITIES: equ 64
