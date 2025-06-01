@@ -12,15 +12,31 @@ extern board_x_offset
 extern board_y_offset
 
 section .data
+    global do_bits:
+
 utf8_buffer:   resb 3
+do_bits:
+    db 0x01, 0x08
+    db 0x02, 0x10
+    db 0x04, 0x20
+    db 0x40, 0x80
 
 section .bss
+    global player_sprite_variants
+    global mob_sprite_variants
+    global projectile_sprite_variants
+
 cell_buffer:   resb BOARD_INNER_WIDTH * BOARD_INNER_HEIGHT
 
+player_sprite_variants: resb 8 * 4
+mob_sprite_variants: resb 8 * 4
+projectile_sprite_variants: resb 8 * 1
+
 section .text
-global emit_utf8_codepoint
-global draw_cell_mask
-global draw_sprite
+    global emit_utf8_codepoint
+    global update_cell_mask
+    global update_sprite
+    global plot_subpixel
 
 emit_utf8_codepoint:
 	lea rax, [rel utf8_buffer]
@@ -50,156 +66,190 @@ emit_utf8_codepoint:
 	syscall
 	ret
 
-draw_cell_mask:
-	; RDI = cellX, RSI = cellY, RDX = mask, RBX = &cell_buffer
-	mov rcx, rsi
+update_cell_mask:
+    ; RDI = cellX, RSI = cellY, RDX = mask, RBX = &cell_buffer, rcx = 0 = draw, rcx = 1 clear
+    push rcx
+    mov rcx, rsi
 	imul rcx, rcx, BOARD_INNER_WIDTH
 	add rcx, rdi
 	lea r8, [rbx + rcx]
+    pop rcx
 
 	movzx r9d, byte [r8]
 	mov al, dl
-	or r9b, al
+    cmp rcx, 0
+    je .draw_cell
+    not al ; invert and then and the registers to clear the bits from the mask
+    and r9b, al
+    jmp .cont
+.draw_cell:
+	or r9b, al ; or the registers to add the bits from the mask
+.cont:
 	cmp r9b, byte [r8]
 	je .dcm_done
 	mov [r8], r9b
 
 	push rdi
 	push rsi
-    add rsi, board_y_offset
-    add rdi, board_x_offset
+    push rax
+    movzx rax, word [rel board_y_offset]
+    add rsi, rax 
+    movzx rax, word [rel board_x_offset]
+    add rdi, rax 
 	xchg rdi, rsi
 	call set_cursor
+    pop rax
 	pop rsi
 	pop rdi
 
+    push rcx
 	movzx ecx, r9b
 	add ecx, 0x2800
 	call emit_utf8_codepoint
-
+    pop rcx
 .dcm_done:
 	ret
-; Updated draw_sprite in src/utils/braille.asm
 
-draw_sprite:
- ; RDI = Xpix, RSI = Ypix, RDX = sprite_ptr
- push  r12
- push  r13
- push  r14
- push  r15
- push  r11
+;---------------------------------------------------
+; update_sprite 
+; description: plots a subpixel for a braille mask
+; inputs: rdi - x subpixel coordinate 
+;         rsi - y subpixel coordinate 
+;         rdx - sprite index 
+;         rcx - operation (0 = draw, 1 = clear)
+; clobbers: rax
+;---------------------------------------------------
+update_sprite:
+    ; Select variants buffer based on spriteID (rdx)
+    cmp   rdx, 0
+    je    .use_player
+    cmp   rdx, 1
+    je    .use_mob
+    cmp   rdx, 2
+    je    .use_projectile
+    ret
 
- mov   r12, rdi           ; Xpix
- mov   r13, rsi           ; Ypix
- mov   r10, rdx           ; sprite_ptr
+.use_player:
+    lea   r8, [rel player_sprite_variants]
+    jmp   .got_variants
 
- ; compute cellX and subX
- mov   rax, r12
- shr   rax, 1
- mov   r14, rax           ; cellX
- mov   rcx, r12
- and   rcx, 1
- mov   r11, rcx           ; subX
+.use_mob:
+    lea   r8, [rel mob_sprite_variants]
+    jmp   .got_variants
 
- ; compute cellY and subY
- mov   rax, r13
- shr   rax, 2
- mov   r15, rax           ; cellY
- mov   rcx, r13
- and   rcx, 3
- mov   r13, rcx           ; subY
+.use_projectile:
+    lea   r8, [rel projectile_sprite_variants]
 
- lea   rbx, [rel cell_buffer]
- lea   rsi, [r10 + 2]     ; baseMask pointer
+.got_variants:
+    ; Compute subX = baseX & 1, subY = baseY & 3
+    mov   rax, rdi
+    and   rax, 1
+    mov   r9, rax
 
- xor   rcx, rcx           ; row = 0
-.row_loop:
- movzx r9d, byte [r10 + 1] ; height_in_cells
- cmp   rcx, r9
- jge   .done
- xor   rbp, rbp           ; col = 0
+    mov   rax, rsi
+    and   rax, 3
+    mov   r10, rax
 
-.col_loop:
- movzx r8d, byte [r10]    ; width_in_cells
- cmp   rbp, r8
- jge   .next_row
+    ; variantIndex = subY*2 + subX
+    mov   rax, r10
+    shl   rax, 1
+    add   rax, r9
 
- ; compute index = row*width + col
- mov   rdx, rcx
- imul  rdx, r8
- add   rdx, rbp
+    ; Point to 4-byte group
+    lea   r8, [r8 + rax*4]
 
- ; load base mask
- mov   al, [rsi + rdx]
- mov   bl, al
+    ; Compute cellBaseX = baseX >> 1, cellBaseY = baseY >> 2
+    mov   rax, rdi
+    shr   rax, 1
+    mov   r11, rax
+    inc r11
 
- ; horizontal shift (swap nibbles if subX==1)
- cmp   r11, 1
- jne   .no_horz
- movzx eax, bl
- mov   dl, al
- and   dl, 0x0F
- shl   dl, 4
- mov   dh, al
- shr   dh, 4
- mov   bl, dl
- or    bl, dh
-.no_horz:
+    mov   rax, rsi
+    shr   rax, 2
+    mov   r12, rax
+    inc r12
 
- ; vertical shift by subY (0–3)
- cmp   r13, 0
- je    .no_vert
+    ; Load masks
+    movzx r13d, byte [r8 + 0]
+    movzx r14d, byte [r8 + 1]
+    movzx r15d, byte [r8 + 2]
+    movzx r10d, byte [r8 + 3]
 
- mov   dl, bl
- and   dl, 0x0F
- mov   dh, bl
- shr   dh, 4
+    ; Set RBX = &cell_buffer for update_cell_mask
+    lea   rbx, [rel cell_buffer]
 
- cmp   r13, 1
- je    .vert1
- cmp   r13, 2
- je    .vert2
- ; subY == 3
- shr   dl, 3
- shr   dh, 3
- jmp   .vert_done
+    ; Draw maskTL
+    cmp   r13b, 0
+    je    .skip_TL
+    mov   edi, r11d
+    mov   esi, r12d
+    mov   edx, r13d
+    push r11
+    push rcx
+    call  update_cell_mask
+    pop rcx
+    pop r11
+.skip_TL:
 
-.vert2:
- shr   dl, 2
- shr   dh, 2
- jmp   .vert_done
+    ; Draw maskTR
+    cmp   r14b, 0
+    je    .skip_TR
+    mov   edi, r11d
+    add   edi, 1
+    mov   esi, r12d
+    mov   edx, r14d
+    push r11
+    push rcx
+    call  update_cell_mask
+    pop rcx
+    pop r11
+.skip_TR:
 
-.vert1:
- shr   dl, 1
- shr   dh, 1
+    ; Draw maskBL
+    cmp   r15b, 0
+    je    .skip_BL
+    mov   edi, r11d
+    mov   esi, r12d
+    add   esi, 1
+    mov   edx, r15d
+    push r11
+    push rcx
+    call  update_cell_mask
+    pop rcx
+    pop r11
+.skip_BL:
 
-.vert_done:
- shl   dh, 4
- mov   bl, dl
- or    bl, dh
+    ; Draw maskBR
+    cmp   r10b, 0
+    je    .skip_BR
+    mov   edi, r11d
+    add   edi, 1
+    mov   esi, r12d
+    add   esi, 1
+    mov   edx, r10d
+    push r11
+    push rcx
+    call  update_cell_mask
+    pop rcx
+    pop r11
+.skip_BR:
 
-.no_vert:
+    ret
+;---------------------------------------------------
+; plot_subpixel
+; description: plots a subpixel for a braille mask
+; inputs: rdi - pointer to one byte from a buffer
+;         rsi - local x (0 or 1)
+;         rdx - local y (0..3)
+; clobbers: rax
+;---------------------------------------------------
+plot_subpixel:
+    push rbx
+    mov rax, rdx
+    shl rax, 1
+    add rax, rsi
 
- ; draw cell
- movzx rdx, bl
- mov   rdi, r14
- add   rdi, rbp         ; cellX + col
- mov   rsi, r15
- add   rsi, rcx         ; cellY + row
- call  draw_cell_mask
-
- inc   rbp
- jmp   .col_loop
-
-.next_row:
- inc   rcx
- jmp   .row_loop
-
-.done:
- pop   r11
- pop   r15
- pop   r14
- pop   r13
- pop   r12
- ret
-
+    mov bl, [rel do_bits + rax]
+    or byte [rdi], bl
+    pop rbx
+    ret

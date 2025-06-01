@@ -32,7 +32,7 @@ extern board_y_offset
 extern sprite_table
 
 ; src/utils/braille.asm
-extern draw_sprite
+extern update_sprite 
 
 ;=============================================================================
 ; EXTERNAL METHODS 
@@ -77,27 +77,30 @@ render_entities:
     ret
 
 .render_entity:
-    movzx esi, byte [r8 + ENTITY_LAST_X] ; writes empty space to previous entity location 
-    movzx ecx, word [rel board_x_offset]
-    add esi, ecx ; add board offset to draw in proper position
-    
-    movzx edi, byte [r8 + ENTITY_LAST_Y]
-    movzx ecx, word [rel board_y_offset]
-    add edi, ecx
-        
-    call set_cursor
-    WRITE space_char, 1
+    mov rcx, 1 
+    movzx edi, byte [r8 + ENTITY_LAST_X] ; writes glyph to current entity location
+    movzx esi, byte [r8 + ENTITY_LAST_Y]
+    push rdx
+    push r8
+    push rax
+    mov dl, [r8 + ENTITY_SPRITE_ID]
+    call update_sprite 
+    pop rax
+    pop r8
+    pop rdx
 
     movzx edi, byte [r8 + ENTITY_X] ; writes glyph to current entity location
     movzx esi, byte [r8 + ENTITY_Y]
-   
-    mov al, [r8 + ENTITY_SPRITE_ID]
-    movzx rax, al
 
-    lea rdx, [rel sprite_table]
-    mov rdx, [rdx + rax * 8]
-
-    call draw_sprite
+    xor rcx, rcx
+    push rdx
+    push r8
+    push rax
+    mov dl, [r8 + ENTITY_SPRITE_ID]
+    call update_sprite 
+    pop rax
+    pop r8
+    pop rdx
 
     movzx esi, byte [r8 + ENTITY_X] ; sets last X and Y to current X and Y to avoid further rendering
     mov byte [r8 + ENTITY_LAST_X], sil

@@ -51,6 +51,9 @@ extern window_resized
 extern calculate_layout
 extern get_window_size
 
+; sprites_init.asm
+extern init_sprite_variants
+
 ;=============================================================================
 ; EXTERNAL DATA 
 ;=============================================================================
@@ -85,13 +88,13 @@ _start:
     call enable_raw_mode
 ;    call read_key
 
+    call init_sprite_variants
     call clear_screen
     call get_window_size
     call calculate_layout
     call render_board 
     call init_game_state
     call setup_win_resize 
-
 clone:
     mov rax, SYS_CLONE ; starts a thread
     mov rdi, THREAD_FLAGS 

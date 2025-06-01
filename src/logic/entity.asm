@@ -297,8 +297,7 @@ mv_left:
 
 mv_right:
     movzx rax, byte [rdi + ENTITY_X]
-    mov rcx, BOARD_WIDTH
-    sub rcx, 2
+    mov rcx, BRAILLE_BOARD_WIDTH
     cmp rax, rcx 
     jge mv_exit 
     inc rax
@@ -315,8 +314,7 @@ mv_up:
   
 mv_down:
     movzx rax, byte [rdi + ENTITY_Y]
-    mov rcx, BOARD_HEIGHT
-    sub rcx, 2
+    mov rcx, BRAILLE_BOARD_HEIGHT 
     cmp rax, rcx 
     jge mv_exit 
     inc rax

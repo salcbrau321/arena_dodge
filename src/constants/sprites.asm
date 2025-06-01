@@ -1,14 +1,21 @@
 ; src/utils/sprites.asm
 section .data
-global sprite_table
+    global sprite_table
+    global player_sprite
+    global mob_sprite
+    global projectile_sprite
 
 player_sprite:
-    db 2, 1
-    db 0x57, 0x07
+    db 3, 3
+    db 0b111,
+    db 0b101,
+    db 0b111
 
 mob_sprite:
-    db 2, 1
-    db 0x72, 0x02
+    db 3, 3
+    db 0b010, 
+    db 0b111,
+    db 0b010 
 
 projectile_sprite:
     db 1, 1
